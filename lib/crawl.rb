@@ -17,6 +17,16 @@ LOG_FILE = "./report.log"
 @http = nil
 @request = nil
 
+def walk(environment = "production", resume_token = nil)
+	token = crawl(environment, resume_token)
+
+	while token do
+		token = crawl(environment, token)
+	end
+
+end
+
+
 def crawl(environment = "production", resume_token = nil)
 	environment = PRODUCTION if environment.downcase == "production"
 	endpoint = environment + SLICE_ENDPOINT
@@ -28,10 +38,10 @@ def crawl(environment = "production", resume_token = nil)
 	@http = Net::HTTP.new(@uri.host, @uri.port)
 	@request = Net::HTTP::Get.new(@uri.request_uri)
 	@logger.info @uri
+	token = nil
 
 	while loop_count < 10 do
 		response = @http.request(@request)
-		#binding.pry
 		if response.code == "200" && response.body.length > 0 then
 			json = JSON.parse(response.body)
 			@logger.info ("Processed: #{@count}, processing #{json["documents"].length} more.")
@@ -46,12 +56,8 @@ def crawl(environment = "production", resume_token = nil)
 			end
 			@count += json["documents"].length
 			puts "Processed #{@count} documents"
-			@uri = nil
-			@http = nil
-			@request = nil
 			token = json["resumption_token"]
-			json = nil
-			crawl(environment, token) if token
+			
 		else
 			if response.code != "200" then
 				@logger.error("HTTP error, response code: #{response.code}, loop count #{loop_count}, resume_token: #{resume_token}")
@@ -62,6 +68,8 @@ def crawl(environment = "production", resume_token = nil)
 			end
 		end
 	end
+
+	token
 end
 
 def ensure_docs_dir
@@ -69,4 +77,4 @@ def ensure_docs_dir
 end
 
 ensure_docs_dir
-crawl("production", "eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9.eyJzdGFydGtleSI6IDEzMTk3ODE1MjgsICJlbmRrZXkiOiAxNDEzNjUzNzk5LCAic3RhcnRrZXlfZG9jaWQiOiAiYTZhNmRhODU1ZjU0NGM1ZjhjNmJiZGVjOWU4ZjMzMDQifQ.Q_m1X7-ETSGvYaMrPfBVtEkuwnxSnPeYyNENkDUMyxg")
+walk "production", nil
