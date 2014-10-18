@@ -13,9 +13,6 @@ LOG_FILE = "./report.log"
 
 @count = 0
 @logger = Logger.new(LOG_FILE)
-@uri = nil
-@http = nil
-@request = nil
 
 def walk(environment = "production", resume_token = nil)
 	token = crawl(environment, resume_token)
@@ -34,14 +31,14 @@ def crawl(environment = "production", resume_token = nil)
 
 	loop_count = 0
 
-	@uri = URI.parse(endpoint)
-	@http = Net::HTTP.new(@uri.host, @uri.port)
-	@request = Net::HTTP::Get.new(@uri.request_uri)
+	uri = URI.parse(endpoint)
+	http = Net::HTTP.new(uri.host, uri.port)
+	request = Net::HTTP::Get.new(uri.request_uri)
 	@logger.info @uri
 	token = nil
 
 	while loop_count < 10 do
-		response = @http.request(@request)
+		response = http.request(request)
 		if response.code == "200" && response.body.length > 0 then
 			json = JSON.parse(response.body)
 			@logger.info ("Processed: #{@count}, processing #{json["documents"].length} more.")
@@ -57,7 +54,6 @@ def crawl(environment = "production", resume_token = nil)
 			@count += json["documents"].length
 			puts "Processed #{@count} documents"
 			token = json["resumption_token"]
-			
 		else
 			if response.code != "200" then
 				@logger.error("HTTP error, response code: #{response.code}, loop count #{loop_count}, resume_token: #{resume_token}")
