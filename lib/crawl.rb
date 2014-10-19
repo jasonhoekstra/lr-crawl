@@ -34,10 +34,12 @@ def crawl(environment = "production", resume_token = nil)
 	uri = URI.parse(endpoint)
 	http = Net::HTTP.new(uri.host, uri.port)
 	request = Net::HTTP::Get.new(uri.request_uri)
-	@logger.info @uri
+	@logger.info uri
 	token = nil
+	found = false
 
-	while loop_count < 10 do
+	while loop_count < 10 && !found do
+		timer = Time.now
 		response = http.request(request)
 		if response.code == "200" && response.body.length > 0 then
 			json = JSON.parse(response.body)
@@ -52,8 +54,10 @@ def crawl(environment = "production", resume_token = nil)
 				end
 			end
 			@count += json["documents"].length
-			puts "Processed #{@count} documents"
+			puts "Processed #{@count} documents in #{Time.now - timer} seconds"
+			@logger.info "Processed #{@count} documents in #{Time.now - timer} seconds"
 			token = json["resumption_token"]
+			found = true
 		else
 			if response.code != "200" then
 				@logger.error("HTTP error, response code: #{response.code}, loop count #{loop_count}, resume_token: #{resume_token}")
